@@ -167,3 +167,11 @@ out
 /samples/.idea/.name
 /samples/.idea/workspace.xml
 *.bin
+
+# AI models
+*.ckpt
+*.safetensors
+*.pt
+*.pth
+*.engine
+*.onnx
