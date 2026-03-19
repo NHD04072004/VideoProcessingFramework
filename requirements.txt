@@ -1,0 +1,4 @@
+ultralytics
+cupy-cuda12x
+paho-mqtt
+opencv-python-headless
