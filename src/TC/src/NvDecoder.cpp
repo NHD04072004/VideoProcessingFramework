@@ -166,6 +166,10 @@ int NvDecoder::HandleVideoSequence(CUVIDEOFORMAT* pVideoFormat) noexcept
     // Shall be enough according to NVIDIA Nvdec mem optimization blog article
     // (https://developer.nvidia.com/blog/optimizing-video-memory-usage-with-the-nvdecode-api-and-nvidia-video-codec-sdk/)
     int nDecodeSurface = pVideoFormat->min_num_decode_surfaces + 3;
+    const char* num_decode_surfaces_str = getenv("NV_NUM_DECODE_SURFACES");
+    if (num_decode_surfaces_str) {
+      nDecodeSurface = atoi(num_decode_surfaces_str);
+    }
 
     CUVIDDECODECAPS decodecaps;
     memset(&decodecaps, 0, sizeof(decodecaps));
@@ -343,6 +347,10 @@ int NvDecoder::ReconfigureDecoder(CUVIDEOFORMAT* pVideoFormat)
                                   p_impl->m_videoFormat.display_area.right);
 
   int nDecodeSurface = pVideoFormat->min_num_decode_surfaces + 3;
+  const char* num_decode_surfaces_str = getenv("NV_NUM_DECODE_SURFACES");
+  if (num_decode_surfaces_str) {
+    nDecodeSurface = atoi(num_decode_surfaces_str);
+  }
 
   if ((pVideoFormat->coded_width > p_impl->m_nMaxWidth) ||
       (pVideoFormat->coded_height > p_impl->m_nMaxHeight)) {
@@ -613,6 +621,10 @@ NvDecoder::NvDecoder(CUstream cuStream, CUcontext cuContext,
       throw std::runtime_error(std::string(err) + "\n" + explanation);
     }
   }
+  int lowLatency = getenv("NV_LOW_LATENCY") ? atoi(getenv("NV_LOW_LATENCY")) : 0;
+  if (lowLatency & 1) setEndOfPicture = true;
+  if (lowLatency & 2) bLowLatency = true;
+
   p_impl = new NvDecoderImpl();
   p_impl->m_cuvidStream = cuStream;
   p_impl->m_cuContext = cuContext;
@@ -722,6 +734,7 @@ bool NvDecoder::DecodeLockSurface(Buffer const* encFrame,
       encFrame ? encFrame->GetDataAs<const unsigned char>() : nullptr;
   packet.payload_size = encFrame ? encFrame->GetRawMemSize() : 0U;
   packet.flags = CUVID_PKT_TIMESTAMP;
+  if (setEndOfPicture) packet.flags |= CUVID_PKT_ENDOFPICTURE;
   packet.timestamp = pdata.pts;
   if (!decCtx.no_eos &&
       (nullptr == packet.payload || 0 == packet.payload_size)) {
